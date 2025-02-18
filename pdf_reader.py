@@ -21,7 +21,7 @@ def load_pdfs_to_txt(directory, output_file):
 
 if __name__ == "__main__":
     # Diretório com os PDFs
-    pdf_directory = r"C:\Users\vitor\Downloads\drive-download-20250209T155226Z-001"  #TODO: Alterar para o caminho da sua máquina
+    pdf_directory = r"C:\Users\vitor\Downloads\LNViA-pdfs"  #TODO: Alterar para o caminho da sua máquina
     # Caminho para o arquivo de saída
     output_txt_file = "base_textual.txt"
     load_pdfs_to_txt(pdf_directory, output_txt_file)

@@ -8,8 +8,10 @@ from langchain.chains import RetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain.schema import SystemMessage, HumanMessage
+from perguntas import perguntas_prontas
 
 logging.basicConfig(level=logging.DEBUG)
+
 
 # Função para carregar e criar vetor baseado no .txt
 @st.cache_resource
@@ -28,20 +30,20 @@ def load_vectorstore(txt_file):
     vectorstore = FAISS.from_texts(chunks, embeddings)
     return vectorstore
 
+
 # Função para usar o modelo do Groq com ChatGroq
 @st.cache_resource
 def load_llm():
     api_key = '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'
 
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",  # Substitua pelo modelo correto
+        model="gemma2-9b-it",  # Substitua pelo modelo correto
         api_key=api_key,
         temperature=0.5,
-        max_tokens=200,
+        max_tokens=500,
         timeout=None,
         max_retries=2
     )
-
     return llm
 
 def main():
@@ -58,48 +60,58 @@ def main():
 
     # Criação do fluxo de perguntas e respostas (Q&A)
     def qa_chain(question, vectorstore):
-        # Recupera os trechos relevantes
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         relevant_texts = retriever.get_relevant_documents(question)
 
-        # Combina os textos relevantes em um único contexto
         context = "\n".join([doc.page_content for doc in relevant_texts])
 
-        # Criação de mensagens no formato esperado pelo LangChain
         messages = [
             SystemMessage(content="Você é um assistente que ajuda com informações baseadas nos editais fornecidos."),
             HumanMessage(content=f"Contexto:\n{context}\n\nPergunta: {question}")
         ]
 
-        # Chama o modelo LLM para gerar a resposta
         response = llm(messages)
-
-        # Retorna a resposta
         return response.content
 
     # Inicializa o estado de mensagens da sessão
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Exibe mensagens anteriores (se houver)
+    # Exibe mensagens anteriores
     for msg in st.session_state.messages:
-        if msg["role"] in ["user", "assistant"]:  # Filtra mensagens inválidas
+        if msg["role"] in ["user", "assistant"]:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
-    # Caixa de entrada para perguntas
-    if question := st.chat_input("Digite sua pergunta:"):
-        # Garante o formato correto da mensagem do usuário
+    # Seção para perguntas prontas dentro de um menu suspenso
+    with st.expander("Clique para ver perguntas frequentes"):
+        for pergunta in perguntas_prontas().values():
+            if st.button(pergunta):  # Botão para cada pergunta pronta
+                st.session_state.selected_question = pergunta
+                st.rerun()  # Recarrega a interface para exibir no histórico
+
+    # Define a pergunta inicial como vazia
+    question = None
+
+    # Se houver uma pergunta pronta selecionada, processa primeiro
+    if "selected_question" in st.session_state:
+        question = st.session_state.selected_question
+        del st.session_state.selected_question  # Remove para permitir novas entradas
+
+    # Exibe o campo de entrada para perguntas manuais
+    manual_question = st.chat_input("Digite sua pergunta:")
+    if manual_question:
+        question = manual_question
+
+    if question:
         user_message = {"role": "user", "content": question}
         st.session_state.messages.append(user_message)
         with st.chat_message("user"):
             st.markdown(question)
 
-        # Processa a pergunta e gera a resposta com o ChatGroq
         with st.spinner("Gerando resposta com base nos editais..."):
-            response = qa_chain(question, vectorstore)  # Passa o vectorstore como argumento
+            response = qa_chain(question, vectorstore)
 
-        # Garante o formato correto da mensagem do assistente
         assistant_message = {"role": "assistant", "content": response}
         st.session_state.messages.append(assistant_message)
         with st.chat_message("assistant"):
@@ -108,4 +120,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
