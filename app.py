@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-import logging
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
@@ -9,9 +8,6 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain.schema import SystemMessage, HumanMessage
 from perguntas import perguntas_prontas
-
-logging.basicConfig(level=logging.DEBUG)
-
 
 # Função para carregar e criar vetor baseado no .txt
 @st.cache_resource
@@ -30,46 +26,51 @@ def load_vectorstore(txt_file):
     vectorstore = FAISS.from_texts(chunks, embeddings)
     return vectorstore
 
-
-# Função para usar o modelo do Groq com ChatGroq
+# Função para "carregar"o modelo de llm via Groq
 @st.cache_resource
 def load_llm():
-    api_key = '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'
+    api_key = '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'
 
     llm = ChatGroq(
-        model="gemma2-9b-it",  # Substitua pelo modelo correto
+        model="llama-3.3-70b-versatile",
         api_key=api_key,
         temperature=0.5,
-        max_tokens=500,
+        max_tokens=600,
         timeout=None,
         max_retries=2
     )
     return llm
 
+#Função principal
 def main():
-    st.title("Assistente de Editais de Iniciação Científica")
-
+    st.title("LNViA")
+    st.subheader("Assistente de Editais de Iniciação Científica")
     # Nome do arquivo base utilizado (seu .txt)
     txt_file = "base_textual.txt"
-
     # Carrega a base de vetores de texto e o modelo LLM
     with st.spinner("Carregando e processando a base de dados..."):
         vectorstore = load_vectorstore(txt_file)
 
     llm = load_llm()
-
     # Criação do fluxo de perguntas e respostas (Q&A)
-    def qa_chain(question, vectorstore):
+    def qa_chain(question, vectorstore, message_history):
         retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
         relevant_texts = retriever.get_relevant_documents(question)
-
         context = "\n".join([doc.page_content for doc in relevant_texts])
-
+        # Concatena o histórico das mensagens anteriores no prompt
+        history_context = ""
+        for msg in message_history[-5:]:  # Últimas 5 mensagens para contexto
+            if msg["role"] == "user":
+                history_context += f"Usuário: {msg['content']}\n"
+            elif msg["role"] == "assistant":
+                history_context += f"Assistente: {msg['content']}\n"
+        # Mensagens para o LLM, incluindo o histórico, o contexto relevante e a nova pergunta
         messages = [
             SystemMessage(content="Você é um assistente que ajuda com informações baseadas nos editais fornecidos."),
-            HumanMessage(content=f"Contexto:\n{context}\n\nPergunta: {question}")
+            HumanMessage(
+                content=f"Contexto relevante:\n{context}\n\nHistórico de conversa:\n{history_context}\n\nPergunta atual: {question}")
         ]
-
+        # Responde com base no LLM
         response = llm(messages)
         return response.content
 
@@ -110,13 +111,12 @@ def main():
             st.markdown(question)
 
         with st.spinner("Gerando resposta com base nos editais..."):
-            response = qa_chain(question, vectorstore)
+            response = qa_chain(question, vectorstore, st.session_state.messages)
 
         assistant_message = {"role": "assistant", "content": response}
         st.session_state.messages.append(assistant_message)
         with st.chat_message("assistant"):
             st.markdown(response)
-
 
 if __name__ == "__main__":
     main()
