@@ -18,7 +18,7 @@ def load_vectorstore(txt_file):
         full_text = file.read()
 
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=6000,
+        chunk_size=2000,
         chunk_overlap=200,
         separators=["\n\n", "\n", " ", ""]
     )
