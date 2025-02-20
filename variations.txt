@@ -1,0 +1,23 @@
+#Variações para realizar os testes da analize#
+
+#/LLM:
+gemma2-9b-it
+llama-3-70b-versatile
+deepseek-r1-distill-llama-70b
+mistral-8x7b-32768
+
+#/Chunkenização:
+chunk_size = 1000, 1500, 2000 ...
+chunk_overlap: 50 , 100, 150 ...
+
+#/Respostas:
+temperature = 0.2 , 0.5, 0.8 ...
+max_tokens = 500, 800, 1000 ...
+k = 2, 5, 7 ...
+
+#/Embeddings:
+sentence-transformers/paraphrase-mpnet-base-v2
+all-MiniLM-L6-v2
+
+#/Performance:
+max_retries: 2, 3, 4 ...
