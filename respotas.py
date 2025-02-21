@@ -1,5 +1,4 @@
-import os
-from app import load_vectorstore, load_llm  # Importando funções do app.py
+from app import load_vectorstore, load_llm
 from perguntas import perguntas_prontas
 from langchain.schema import SystemMessage, HumanMessage
 

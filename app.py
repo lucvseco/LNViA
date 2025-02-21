@@ -1,9 +1,6 @@
-import os
 import streamlit as st
-from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain.chains import RetrievalQA
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain.schema import SystemMessage, HumanMessage
@@ -72,35 +69,33 @@ def main():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    if "mostrar_todas" not in st.session_state:
+        st.session_state.mostrar_todas = False
+
     for msg in st.session_state.messages:
         if msg["role"] in ["user", "assistant"]:
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
+    with st.sidebar:
+        st.markdown("###  Perguntas Frequentes:")
 
-    with st.expander("Clique para ver perguntas frequentes"):
         todas_perguntas = list(perguntas_prontas().values())
-
-        if "mostrar_todas" not in st.session_state:
-            st.session_state.mostrar_todas = False
-
-
-        if st.session_state.mostrar_todas:
-            perguntas_a_exibir = todas_perguntas
-        else:
-            perguntas_a_exibir = todas_perguntas[:5]
-
+        perguntas_a_exibir = todas_perguntas if st.session_state.mostrar_todas else todas_perguntas[:5]
 
         for pergunta in perguntas_a_exibir:
-            if st.button(pergunta):
+            if st.button(pergunta, key=f"pergunta_{pergunta}"):
                 st.session_state.selected_question = pergunta
-                st.rerun()
+                st.session_state.update()
 
-        if not st.session_state.mostrar_todas and len(todas_perguntas) > 5:
-            if st.button("Ver mais"):
+        if st.session_state.mostrar_todas:
+            if st.button("Ver Menos 🔼"):
+                st.session_state.mostrar_todas = False
+                st.session_state.update()
+        else:
+            if len(todas_perguntas) > 5 and st.button("Ver Mais 🔽"):
                 st.session_state.mostrar_todas = True
-                st.rerun()
-
+                st.session_state.update()
 
     question = None
 
